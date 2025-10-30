@@ -165,7 +165,7 @@ def login_page(background_url: Optional[str] = None) -> bool:
         if login_button:
             if authenticate_user(username, password):
                 st.session_state['authenticated'] = True
-                st.session_state['username'] = username
+                # st.session_state['remember_me'] = remember_me  # Remove this line
                 st.session_state['remember_me'] = remember_me
                 st.success("✅ Login successful!")
                 st.rerun()
