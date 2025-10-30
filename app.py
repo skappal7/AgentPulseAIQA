@@ -330,7 +330,7 @@ def classify_transcripts(df, rules_df, transcript_col, enable_pii, batch_size):
     st.session_state['classified_data'] = classified_df
     
     # Save to parquet
-    output_path = Path("/home/claude/agentpulse_ai/data/classified_transcripts.parquet")
+    output_path = Path("./data/classified_transcripts.parquet")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     classified_df.to_parquet(output_path, index=False)
     
