@@ -199,8 +199,8 @@ def authenticate_user(username: str, password: str) -> bool:
         
         # Fallback: hardcoded demo credentials (REMOVE IN PRODUCTION)
         demo_users = {
-            'admin': hash_password('admin123'),
-            'demo': hash_password('demo123')
+            'admin': hash_password('123'),
+            'demo': hash_password('123')
         }
         
         if username in demo_users:
