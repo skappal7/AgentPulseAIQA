@@ -330,7 +330,7 @@ def classify_transcripts(df, rules_df, transcript_col, enable_pii, batch_size):
     st.session_state['classified_data'] = classified_df
     
     # Save to parquet
-    output_path = Path("./data/classified_transcripts.parquet")
+    output_path = Path("/home/claude/agentpulse_ai/data/classified_transcripts.parquet")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     classified_df.to_parquet(output_path, index=False)
     
@@ -391,7 +391,11 @@ def analyze_tab():
     
     with col4:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        st.metric("Agents", summary['unique_agents'])
+        if summary.get('has_agent_data', False):
+            st.metric("Agents", summary['unique_agents'])
+        else:
+            st.metric("Agents", "N/A")
+            st.caption("No agent data available")
         st.markdown('</div>', unsafe_allow_html=True)
     
     # Category distribution
@@ -411,10 +415,16 @@ def analyze_tab():
         resolve_dist = analytics.get_resolve_reason_distribution()
         st.dataframe(resolve_dist, use_container_width=True)
     
-    # Agent performance
-    st.markdown("### Agent Performance")
-    agent_perf = analytics.get_agent_performance()
-    st.dataframe(agent_perf, use_container_width=True)
+    # Agent performance - only show if agent data exists
+    if summary.get('has_agent_data', False):
+        st.markdown("### Agent Performance")
+        agent_perf = analytics.get_agent_performance()
+        if not agent_perf.empty:
+            st.dataframe(agent_perf, use_container_width=True)
+        else:
+            st.info("No agent performance data available")
+    else:
+        st.info("ℹ️ Agent performance metrics are not available (no agent_name column in data)")
 
 
 def coaching_tab():
@@ -426,6 +436,18 @@ def coaching_tab():
         return
     
     classified_df = st.session_state['classified_data']
+    
+    # Check if agent_name column exists
+    if 'agent_name' not in classified_df.columns:
+        st.warning("⚠️ No agent data available in your dataset. LLM coaching requires agent information.")
+        st.info("💡 To use coaching features, ensure your data includes an 'agent_name' column with agent identifiers.")
+        return
+    
+    # Check if there are any non-null agents
+    agents = classified_df['agent_name'].dropna().unique().tolist()
+    if len(agents) == 0:
+        st.warning("⚠️ No agent names found in the data.")
+        return
     
     # LLM Configuration
     st.markdown("### LLM Configuration")
@@ -479,7 +501,6 @@ def coaching_tab():
     with col2:
         st.markdown("#### Token Info")
         if provider == "OpenRouter (Free Models)":
-            context_limit = LLMCoachingEngine.OPENROUTER_FREE_MODELS
             st.info(f"Context: ~8K-64K tokens")
         else:
             st.info("Context: ~4K tokens")
@@ -487,15 +508,10 @@ def coaching_tab():
     # Agent selection
     st.markdown("### Select Agents for Coaching")
     
-    # Get unique agents
-    if 'agent_name' in classified_df.columns:
-        agents = classified_df['agent_name'].dropna().unique().tolist()
-        selected_agents = st.multiselect("Agents", agents, max_selections=5)
-        
-        if selected_agents and st.button("🚀 Generate Coaching", type="primary"):
-            generate_coaching(classified_df, selected_agents, config)
-    else:
-        st.warning("⚠️ No agent_name column found in data")
+    selected_agents = st.multiselect("Agents", agents, max_selections=5)
+    
+    if selected_agents and st.button("🚀 Generate Coaching", type="primary"):
+        generate_coaching(classified_df, selected_agents, config)
 
 
 def generate_coaching(df, agents, config):
